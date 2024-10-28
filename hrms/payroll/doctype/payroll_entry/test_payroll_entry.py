@@ -4,8 +4,13 @@
 from dateutil.relativedelta import relativedelta
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, add_months, cstr
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import add_days, add_months, cstr, flt
+>>>>>>> 44cdcc7df (fix: correct bank entry calculation and update the testcase)
 
 import erpnext
 from erpnext.accounts.utils import get_fiscal_year, getdate, nowdate
@@ -749,8 +754,19 @@ class TestPayrollEntry(FrappeTestCase):
 			total_loan_repayment=loan.monthly_repayment_amount,
 		)
 
+		salary_slip_name = frappe.db.get_value("Salary Slip", {"payroll_entry": payroll_entry.name}, "name")
+		salary_slip = frappe.get_doc("Salary Slip", salary_slip_name)
+		payroll_entry.reload()
+
+		initial_gross_pay = flt(salary_slip.gross_pay) - flt(salary_slip.total_deduction)
+		loan_repayment_amount = flt(salary_slip.total_loan_repayment)
+		expected_net_pay = initial_gross_pay - loan_repayment_amount
+
 		payroll_entry.make_bank_entry()
 		submit_bank_entry(payroll_entry.name)
+
+		salary_slip.reload()
+		self.assertEqual(salary_slip.net_pay, expected_net_pay)
 
 
 def get_payroll_entry(**args):
