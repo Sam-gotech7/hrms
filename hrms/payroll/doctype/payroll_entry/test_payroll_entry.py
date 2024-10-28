@@ -760,13 +760,27 @@ class TestPayrollEntry(FrappeTestCase):
 
 		initial_gross_pay = flt(salary_slip.gross_pay) - flt(salary_slip.total_deduction)
 		loan_repayment_amount = flt(salary_slip.total_loan_repayment)
-		expected_net_pay = initial_gross_pay - loan_repayment_amount
+		expected_bank_entry_amount = initial_gross_pay - loan_repayment_amount
 
 		payroll_entry.make_bank_entry()
 		submit_bank_entry(payroll_entry.name)
 
-		salary_slip.reload()
-		self.assertEqual(salary_slip.net_pay, expected_net_pay)
+		bank_entry = frappe.db.sql(
+			"""
+			SELECT je.total_debit, je.total_credit
+			FROM `tabJournal Entry` je
+			INNER JOIN `tabJournal Entry Account` jea ON je.name = jea.parent
+			WHERE je.voucher_type = 'Bank Entry' AND jea.reference_type = 'Payroll Entry' AND jea.reference_name = %s
+			LIMIT 1
+			""",
+			payroll_entry.name,
+			as_dict=True,
+		)
+
+		total_debit = bank_entry[0].get("total_debit", 0)
+		total_credit = bank_entry[0].get("total_credit", 0)
+		self.assertEqual(total_debit, expected_bank_entry_amount)
+		self.assertEqual(total_credit, expected_bank_entry_amount)
 
 
 def get_payroll_entry(**args):
