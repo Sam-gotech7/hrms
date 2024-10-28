@@ -923,7 +923,11 @@ class PayrollEntry(Document):
 
 					salary_slip_total -= salary_detail.amount
 
-			salary_slip_total -= flt(salary_detail.get("total_loan_repayment"))
+		total_loan_repayment = sum(
+			flt(slip.get("total_loan_repayment", 0))
+			for slip in {slip["name"]: slip for slip in salary_slips}.values()
+		)
+		salary_slip_total -= total_loan_repayment
 
 		bank_entry = None
 		if salary_slip_total > 0:
