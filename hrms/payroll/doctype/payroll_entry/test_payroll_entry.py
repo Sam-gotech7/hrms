@@ -4,13 +4,8 @@
 from dateutil.relativedelta import relativedelta
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_days, add_months, cstr
-=======
-from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_days, add_months, cstr, flt
->>>>>>> 44cdcc7df (fix: correct bank entry calculation and update the testcase)
 
 import erpnext
 from erpnext.accounts.utils import get_fiscal_year, getdate, nowdate
