@@ -24,5 +24,18 @@ def get_boot():
 		{
 			"site_name": frappe.local.site,
 			"push_relay_server_url": frappe.conf.get("push_relay_server_url") or "",
+			"default_route": get_default_route(),
 		}
 	)
+<<<<<<< HEAD
+=======
+
+	bootinfo.lang = frappe.local.lang
+	load_translations(bootinfo)
+
+	return bootinfo
+
+
+def get_default_route():
+	return "/hrms"
+>>>>>>> 4ba8046db (fix(PWA): post login redirection fails due to `default_route` conflict with other app (#2351))
