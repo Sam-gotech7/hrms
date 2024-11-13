@@ -30,6 +30,7 @@
 		</div>
 	</div>
 
+	<!-- Modal for QR Code -->
 	<ion-modal
 		v-if="settings.data?.allow_employee_checkin_from_mobile_app"
 		ref="modal"
@@ -39,37 +40,9 @@
 	>
 		<div class="h-120 w-full flex flex-col items-center justify-center gap-5 p-4 mb-5">
 			<div class="flex flex-col gap-1.5 mt-2 items-center justify-center">
-				<div class="font-bold text-xl">
-					{{ dayjs(checkinTimestamp).format("hh:mm:ss a") }}
-				</div>
-				<div class="font-medium text-gray-500 text-sm">
-					{{ dayjs().format("D MMM, YYYY") }}
-				</div>
+				<!-- Display QR Code with formatted value -->
+				<QrcodeVue :value="qrCodeValue" :size="150" />
 			</div>
-
-			<template v-if="settings.data?.allow_geolocation_tracking">
-				<span v-if="locationStatus" class="font-medium text-gray-500 text-sm">
-					{{ locationStatus }}
-				</span>
-
-				<div class="rounded border-4 translate-z-0 block overflow-hidden w-full h-170">
-					<iframe
-						width="100%"
-						height="170"
-						frameborder="0"
-						scrolling="no"
-						marginheight="0"
-						marginwidth="0"
-						style="border: 0"
-						:src="`https://maps.google.com/maps?q=${latitude},${longitude}&hl=en&z=15&amp;output=embed`"
-					>
-					</iframe>
-				</div>
-			</template>
-
-			<Button variant="solid" class="w-full py-5 text-sm" @click="submitLog(nextAction.action)">
-				Confirm {{ nextAction.label }}
-			</Button>
 		</div>
 	</ion-modal>
 </template>
@@ -78,11 +51,12 @@
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
 import { computed, inject, ref, onMounted, onBeforeUnmount } from "vue"
 import { IonModal, modalController } from "@ionic/vue"
-
+// Import QrcodeVue from qrcode.vue
+import QrcodeVue from "qrcode.vue"
 import { formatTimestamp } from "@/utils/formatters"
 
+// Define constants and state variables
 const DOCTYPE = "Employee Checkin"
-
 const socket = inject("$socket")
 const employee = inject("$employee")
 const dayjs = inject("$dayjs")
@@ -91,6 +65,7 @@ const latitude = ref(0)
 const longitude = ref(0)
 const locationStatus = ref("")
 
+// Fetch HR settings and employee check-ins
 const settings = createResource({
 	url: "hrms.api.get_hr_settings",
 	auto: true,
@@ -106,6 +81,14 @@ const checkins = createListResource({
 })
 checkins.reload()
 
+// Computed property to format employee name and current timestamp
+const qrCodeValue = computed(() => {
+	const name = employee?.data?.name || "Unknown"
+	const currentTime = dayjs().format("YYYY-MM-DD HH:mm:ss")
+	return `${name}&${latitude.value}&${longitude.value}&${currentTime}`
+})
+
+// Computed properties for last log details and next action
 const lastLog = computed(() => {
 	if (checkins.list.loading || !checkins.data) return {}
 	return checkins.data[0]
@@ -117,10 +100,11 @@ const lastLogType = computed(() => {
 
 const nextAction = computed(() => {
 	return lastLog?.value?.log_type === "IN"
-		? { action: "OUT", label: "Check Out" }
-		: { action: "IN", label: "Check In" }
+		? { action: "OUT", label: "Check Out " }
+		: { action: "IN", label: "Check In " }
 })
 
+// Functions to handle geolocation
 function handleLocationSuccess(position) {
 	latitude.value = position.coords.latitude
 	longitude.value = position.coords.longitude
@@ -145,6 +129,7 @@ const fetchLocation = () => {
 	}
 }
 
+// Function to handle employee check-in/check-out actions
 const handleEmployeeCheckin = () => {
 	checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
 
@@ -153,6 +138,7 @@ const handleEmployeeCheckin = () => {
 	}
 }
 
+// Function to submit a check-in/check-out log
 const submitLog = (logType) => {
 	const action = logType === "IN" ? "Check-in" : "Check-out"
 
@@ -188,6 +174,7 @@ const submitLog = (logType) => {
 	)
 }
 
+// Socket setup for real-time updates
 onMounted(() => {
 	socket.emit("doctype_subscribe", DOCTYPE)
 	socket.on("list_update", (data) => {
