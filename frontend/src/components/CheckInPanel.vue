@@ -39,7 +39,15 @@
 		:breakpoints="[0, 1]"
 	>
 		<div class="h-120 w-full flex flex-col items-center justify-center gap-5 p-4 mb-5">
-			<div class="flex flex-col gap-1.5 mt-2 items-center justify-center">
+			<div class="flex flex-col gap-1.5 mt-2 mb-2 items-center justify-center">
+				<div class="flex flex-col gap-1.5 mt-2 mb-2 items-center justify-center">
+				<div class="font-bold text-xl">
+					{{ dayjs(checkinTimestamp).format("hh:mm:ss a") }}
+				</div>
+				<div class="font-medium text-gray-500 text-sm">
+					{{ dayjs().format("D MMM, YYYY") }}
+				</div>
+			</div>
 				<!-- Display QR Code with formatted value -->
 				<QrcodeVue :value="qrCodeValue" :size="150" />
 			</div>
