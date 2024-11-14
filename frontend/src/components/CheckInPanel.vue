@@ -89,7 +89,11 @@ const checkins = createListResource({
 	orderBy: "time desc",
 })
 checkins.reload()
-
+const qrCodeValue = computed(() => {
+	const name = employee?.data?.name || "Unknown"
+	const currentTime = dayjs().format("YYYY-MM-DD HH:mm:ss")
+	return `${name}&${latitude.value}&${longitude.value}&${currentTime}`
+})
 // Computed properties for last log details and next action
 const lastLog = computed(() => checkins.data?.[0] || {})
 const lastLogType = computed(() => (lastLog?.value?.log_type === "IN" ? "check-in" : "check-out"))
