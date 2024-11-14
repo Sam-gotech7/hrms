@@ -62,7 +62,7 @@ const props = defineProps({
 	pageTitle: {
 		type: String,
 		required: false,
-		default: "Move HR",
+		default: "Redee HR",
 	},
 })
 </script>
