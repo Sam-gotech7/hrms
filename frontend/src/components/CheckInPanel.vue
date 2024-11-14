@@ -73,7 +73,8 @@ const dayjs = inject("$dayjs")
 const checkinTimestamp = ref(null)
 const currentLogType = ref("")
 const lastLogTime = ref(null)
-
+const latitude = ref(0)
+const longitude = ref(0)
 // Fetch HR settings and employee check-ins
 const settings = createResource({
 	url: "hrms.api.get_hr_settings",
@@ -94,6 +95,7 @@ const qrCodeValue = computed(() => {
 	const currentTime = dayjs().format("YYYY-MM-DD HH:mm:ss")
 	return `${name}&${latitude.value}&${longitude.value}&${currentTime}`
 })
+console.log(qrCodeValue)
 // Computed properties for last log details and next action
 const lastLog = computed(() => checkins.data?.[0] || {})
 const lastLogType = computed(() => (lastLog?.value?.log_type === "IN" ? "check-in" : "check-out"))
