@@ -1,15 +1,28 @@
 <template>
-	<div class="flex flex-col bg-white rounded w-full py-6 px-4 border-none">
-		<h2 class="text-lg font-bold text-gray-900">Hey, {{ employee?.data?.first_name }} 👋</h2>
+	<div class="flex flex-col bg-white rounded-lg shadow w-full py-6 px-4 border-none">
+		<!-- Greeting and Reload Button Row -->
+		<div class="flex items-center justify-between mb-4">
+			<h2 class="text-xl font-semibold text-gray-900">Hey, {{ employee?.data?.first_name }} 👋</h2>
+			<!-- Reload Button with Icon -->
+			<Button
+				class="text-gray-500 border border-gray-300 hover:border-gray-400 hover:text-gray-700 px-2 py-1 rounded"
+				@click="fetchLatestLog"
+			>
+				<FeatherIcon name="refresh-cw" class="w-5 h-5" />
+			</Button>
+		</div>
 
+		<!-- Last Check-in Info -->
 		<template v-if="settings.data?.allow_employee_checkin_from_mobile_app">
-			<div class="font-medium text-sm text-gray-500 mt-1.5" v-if="lastLog">
+			<div class="font-medium text-sm text-gray-500 mb-4" v-if="lastLog">
 				<span>Last {{ lastLogType }} was at {{ formatTimestamp(lastLog.time) }}</span>
 				<span class="whitespace-pre"> &middot; </span>
 				<router-link :to="{ name: 'EmployeeCheckinListView' }" v-slot="{ navigate }">
-					<span @click="navigate" class="underline">View List</span>
+					<span @click="navigate" class="underline text-blue-600">View List</span>
 				</router-link>
 			</div>
+
+			<!-- Check-In/Check-Out Button -->
 			<Button
 				class="mt-4 mb-1 drop-shadow-sm py-5 text-base"
 				id="open-checkin-modal"
@@ -25,7 +38,8 @@
 			</Button>
 		</template>
 
-		<div v-else class="font-medium text-sm text-gray-500 mt-1.5">
+		<!-- Display Date if Check-in from Mobile App is Not Allowed -->
+		<div v-else class="font-medium text-sm text-gray-500 mt-1.5 text-center">
 			{{ dayjs().format("ddd, D MMMM, YYYY") }}
 		</div>
 	</div>
@@ -141,6 +155,18 @@ const fetchLocation = () => {
 	}
 }
 
+const fetchLatestLog = () => {
+	checkins.reload().then(() => {
+		toast({
+			title: "Reloaded",
+			text: "Latest check-in log fetched successfully!",
+			icon: "refresh-cw",
+			position: "bottom-center",
+			iconClasses: "text-blue-500",
+		});
+	});
+};
+
 // Function to handle employee check-in/check-out actions
 const handleEmployeeCheckin = () => {
 	checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
@@ -189,7 +215,7 @@ const submitLog = (logType) => {
 // Socket setup for real-time updates
 onMounted(() => {
 
-	 if (socket && socket.connected) {
+	if (socket && socket.connected) {
         console.log("Socket is connected");
     } else {
         console.error("Socket is not connected");
