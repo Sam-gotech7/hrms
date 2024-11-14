@@ -4,14 +4,12 @@
 
 		<template v-if="settings.data?.allow_employee_checkin_from_mobile_app">
 			<div class="font-medium text-sm text-gray-500 mt-1.5" v-if="lastLog">
-				<span>Last {{ lastLogType }} was at {{ formatTimestamp(lastLogTime) }}</span>
+				<span>Last {{ lastLogType }} was at {{ formatTimestamp(lastLog.time) }}</span>
 				<span class="whitespace-pre"> &middot; </span>
 				<router-link :to="{ name: 'EmployeeCheckinListView' }" v-slot="{ navigate }">
 					<span @click="navigate" class="underline">View List</span>
 				</router-link>
 			</div>
-			
-			<!-- Check In / Check Out Button -->
 			<Button
 				class="mt-4 mb-1 drop-shadow-sm py-5 text-base"
 				id="open-checkin-modal"
@@ -32,7 +30,7 @@
 		</div>
 	</div>
 
-	<!-- Modal for QR Code and Check-in/Check-out Details -->
+	<!-- Modal for QR Code -->
 	<ion-modal
 		v-if="settings.data?.allow_employee_checkin_from_mobile_app"
 		ref="modal"
@@ -42,18 +40,20 @@
 	>
 		<div class="h-120 w-full flex flex-col items-center justify-center gap-5 p-4 mb-5">
 			<div class="flex flex-col gap-1.5 mt-2 mb-2 items-center justify-center">
+				<div class="flex flex-col gap-1.5 mt-2 mb-2 items-center justify-center">
 				<div class="font-bold text-xl">
-					{{ currentLogType }}: {{ dayjs(checkinTimestamp).format("hh:mm:ss a") }}
+					{{ dayjs(checkinTimestamp).format("hh:mm:ss a") }}
 				</div>
 				<div class="font-medium text-gray-500 text-sm">
 					{{ dayjs().format("D MMM, YYYY") }}
 				</div>
+			</div>
 				<!-- Display QR Code with formatted value -->
 				<QrcodeVue :value="qrCodeValue" :size="150" />
 			</div>
 			<!-- Display Last Log Details -->
 			<div class="font-medium text-sm text-gray-500 mt-4">
-				Last {{ lastLogType }} was at {{ formatTimestamp(lastLogTime) }}
+				Last {{ lastLogType }} was at {{ formatTimestamp(lastLog.time) }}
 			</div>
 		</div>
 	</ion-modal>
@@ -62,19 +62,21 @@
 <script setup>
 import { createResource, createListResource, toast, FeatherIcon } from "frappe-ui"
 import { computed, inject, ref, onMounted, onBeforeUnmount } from "vue"
-import { IonModal } from "@ionic/vue"
+import { IonModal, modalController } from "@ionic/vue"
+// Import QrcodeVue from qrcode.vue
 import QrcodeVue from "qrcode.vue"
 import { formatTimestamp } from "@/utils/formatters"
 
+// Define constants and state variables
 const DOCTYPE = "Employee Checkin"
 const socket = inject("$socket")
 const employee = inject("$employee")
 const dayjs = inject("$dayjs")
 const checkinTimestamp = ref(null)
-const currentLogType = ref("")
-const lastLogTime = ref(null)
 const latitude = ref(0)
 const longitude = ref(0)
+const locationStatus = ref("")
+
 // Fetch HR settings and employee check-ins
 const settings = createResource({
 	url: "hrms.api.get_hr_settings",
@@ -90,30 +92,98 @@ const checkins = createListResource({
 	orderBy: "time desc",
 })
 checkins.reload()
+
+// Computed property to format employee name and current timestamp
 const qrCodeValue = computed(() => {
 	const name = employee?.data?.name || "Unknown"
 	const currentTime = dayjs().format("YYYY-MM-DD HH:mm:ss")
 	return `${name}&${latitude.value}&${longitude.value}&${currentTime}`
 })
-console.log(qrCodeValue)
+
 // Computed properties for last log details and next action
-const lastLog = computed(() => checkins.data?.[0] || {})
-const lastLogType = computed(() => (lastLog?.value?.log_type === "IN" ? "check-in" : "check-out"))
-const nextAction = computed(() => {
-	// Default to Check In if no last log, otherwise toggle
-	return lastLog?.value?.log_type === "IN"
-		? { action: "OUT", label: "Check Out" }
-		: { action: "IN", label: "Check In" }
+const lastLog = computed(() => {
+	if (checkins.list.loading || !checkins.data) return {}
+	return checkins.data[0]
 })
+
+const lastLogType = computed(() => {
+	return lastLog?.value?.log_type === "IN" ? "check-in" : "check-out"
+})
+
+const nextAction = computed(() => {
+	return lastLog?.value?.log_type === "IN"
+		? { action: "OUT", label: "Check Out " }
+		: { action: "IN", label: "Check In " }
+})
+
+// Functions to handle geolocation
+function handleLocationSuccess(position) {
+	latitude.value = position.coords.latitude
+	longitude.value = position.coords.longitude
+
+	locationStatus.value = `
+		Latitude: ${Number(latitude.value).toFixed(5)}°,
+		Longitude: ${Number(longitude.value).toFixed(5)}°
+	`
+}
+
+function handleLocationError(error) {
+	locationStatus.value = "Unable to retrieve your location"
+	if (error) locationStatus.value += `: ERROR(${error.code}): ${error.message}`
+}
+
+const fetchLocation = () => {
+	if (!navigator.geolocation) {
+		locationStatus.value = "Geolocation is not supported by your current browser"
+	} else {
+		locationStatus.value = "Locating..."
+		navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError)
+	}
+}
 
 // Function to handle employee check-in/check-out actions
 const handleEmployeeCheckin = () => {
 	checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
-	socket.emit("staff_attendance_log", {
-		member: employee.data.name,
-		time: checkinTimestamp.value,
-		log_type: nextAction.value.action,
-	})
+
+	if (settings.data?.allow_geolocation_tracking) {
+		fetchLocation()
+	}
+}
+
+// Function to submit a check-in/check-out log
+const submitLog = (logType) => {
+	const action = logType === "IN" ? "Check-in" : "Check-out"
+
+	checkins.insert.submit(
+		{
+			employee: employee.data.name,
+			log_type: logType,
+			time: checkinTimestamp.value,
+			latitude: latitude.value,
+			longitude: longitude.value,
+		},
+		{
+			onSuccess() {
+				modalController.dismiss()
+				toast({
+					title: "Success",
+					text: `${action} successful!`,
+					icon: "check-circle",
+					position: "bottom-center",
+					iconClasses: "text-green-500",
+				})
+			},
+			onError() {
+				toast({
+					title: "Error",
+					text: `${action} failed!`,
+					icon: "alert-circle",
+					position: "bottom-center",
+					iconClasses: "text-red-500",
+				})
+			},
+		}
+	)
 }
 
 // Socket setup for real-time updates
@@ -126,8 +196,6 @@ onMounted(() => {
 	})
 	socket.on("staff_attendance_log", (data) => {
 		// Update log type and time upon receiving real-time data
-		currentLogType.value = data.log_type
-		lastLogTime.value = data.time
 		checkins.reload()
 		// Display a toast notification
 		toast({
@@ -146,3 +214,12 @@ onBeforeUnmount(() => {
 	socket.off("staff_attendance_log")
 })
 </script>
+
+
+
+
+
+
+
+
+
