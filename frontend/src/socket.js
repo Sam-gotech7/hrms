@@ -16,6 +16,7 @@ export function initSocket() {
 	})
 
 	socket.on("hrms:refetch_resource", (data) => {
+		console.log(" socket in on")
 		if (data.cache_key) {
 			let resource =
 				getCachedResource(data.cache_key) ||
