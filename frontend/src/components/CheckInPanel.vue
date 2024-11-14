@@ -188,6 +188,12 @@ const submitLog = (logType) => {
 
 // Socket setup for real-time updates
 onMounted(() => {
+
+	 if (socket && socket.connected) {
+        console.log("Socket is connected");
+    } else {
+        console.error("Socket is not connected");
+    }	
 	socket.emit("doctype_subscribe", DOCTYPE)
 	socket.on("list_update", (data) => {
 		if (data.doctype == DOCTYPE) {
@@ -195,17 +201,19 @@ onMounted(() => {
 		}
 	})
 	socket.on("staff_attendance_log", (data) => {
-		// Update log type and time upon receiving real-time data
-		checkins.reload()
-		// Display a toast notification
-		toast({
-			title: "Check-in Update",
-			text: `Checked ${data.log_type} at ${formatTimestamp(data.time)}`,
-			icon: "check-circle",
-			position: "bottom-center",
-			iconClasses: "text-green-500",
-		})
-	})
+        console.log("Staff attendance log received:", data);
+        checkins.reload();
+		modalController.dismiss()
+        
+        toast({
+            title: "Check-in Update",
+            text: `Checked ${data.log_type} at ${formatTimestamp(data.time)}`,
+            icon: "check-circle",
+            position: "bottom-center",
+            iconClasses: "text-green-500",
+        });
+    });
+	
 })
 
 onBeforeUnmount(() => {
