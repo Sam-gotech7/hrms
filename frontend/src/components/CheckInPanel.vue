@@ -62,12 +62,15 @@
 					{{ dayjs().format("D MMM, YYYY") }}
 				</div>
 			</div>
+
+
+			
 				<!-- Display QR Code with formatted value -->
 				<QrcodeVue :value="qrCodeValue" :size="150" />
 			</div>
 			<!-- Display Last Log Details -->
 			<div class="font-medium text-sm text-gray-500 mt-4">
-				Last {{ lastLogType }} was at {{ formatTimestamp(lastLog.time) }}
+				Last {{ lastLogType }} was at {{ formatTimestamp(lastLog?.time) }}
 			</div>
 		</div>
 	</ion-modal>
@@ -169,7 +172,11 @@ const fetchLatestLog = () => {
 
 // Function to handle employee check-in/check-out actions
 const handleEmployeeCheckin = () => {
-	checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
+	try {
+		checkinTimestamp.value = dayjs().format("YYYY-MM-DD HH:mm:ss")
+	} catch (error) {
+		
+	}
 
 	if (settings.data?.allow_geolocation_tracking) {
 		fetchLocation()
