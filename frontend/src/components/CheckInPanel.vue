@@ -64,14 +64,19 @@
 			</div>
 
 
-			
+
 				<!-- Display QR Code with formatted value -->
 				<QrcodeVue :value="qrCodeValue" :size="150" />
 			</div>
 			<!-- Display Last Log Details -->
-			<div class="font-medium text-sm text-gray-500 mt-4">
-				Last {{ lastLogType }} was at {{ formatTimestamp(lastLog?.time) }}
-			</div>
+		
+<div 
+    class="font-medium text-sm text-gray-500 mt-4"
+    v-if="lastLog?.time"
+>
+    Last {{ lastLogType }} was at {{ formatTimestamp(lastLog?.time) }}
+</div>
+
 		</div>
 	</ion-modal>
 </template>
